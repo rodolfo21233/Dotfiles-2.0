@@ -1,0 +1,13 @@
+[config.wallpaper]
+command = "awww"
+arguments = ["img", "--transition-type", "center"]
+set = true
+
+[templates.quickshell]
+input_path = '/home/larplarpsahur/.config/matugen/templates/quickshell.json'
+output_path = '~/.local/state/quickshell/generated/colors.json'
+
+[templates.cava]
+input_path = '/home/larplarpsahur/.config/matugen/templates/cava-colors.ini'
+output_path = '~/.config/cava/themes/your-theme'
+post_hook = 'pkill -USR2 cava'
