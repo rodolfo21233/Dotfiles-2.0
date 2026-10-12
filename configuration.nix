@@ -2,14 +2,30 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs,inputs,osu, ... }:
 
-{
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
+{ config, pkgs, inputs, osu, ... }:
+
+let
+  spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.system};
+in {
+  imports = [
+    ./hardware-configuration.nix
+  ];
+
+  programs.spicetify = {
+    enable = true;
+
+    enabledExtensions = with spicePkgs.extensions; [
+      adblockify
+      hidePodcasts
+      shuffle
+      spicyLyrics
+      sidebarCustomizer
     ];
 
+    theme = spicePkgs.themes.defaultDynamic;
+    
+  };
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -22,6 +38,17 @@
   # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
   boot.kernelPackages = pkgs.linuxPackages_zen;   
   
+   systemd.user.services.lyrics-api = {
+    description = "Spotify lyrics API";
+    wantedBy = [ "default.target" ];
+    serviceConfig = {
+      WorkingDirectory = "%h/spotify-lyrics-api";
+      EnvironmentFile = "%h/.config/lyrics-api.env";
+      ExecStart = "${pkgs.php}/bin/php -S localhost:8080 api/index.php";
+      Restart = "on-failure";
+      RestartSec = 5;
+    };
+   };
   # Enable networking
  
   networking.networkmanager = {
@@ -95,7 +122,9 @@
     dates = "04:00";
     allowReboot = true;
   };
-   
+  
+  services.blueman.enable = true;
+
   networking.wireless.iwd.enable = true;
 
   #limit generations
@@ -118,7 +147,7 @@
    services.flatpak.enable = true;
    services.power-profiles-daemon.enable = true;
    services.upower.enable = true;
-   
+      
   
 programs.nix-ld = {
   enable = true;
@@ -129,20 +158,21 @@ programs.nix-ld = {
     openssl
   ];
 };
-
   programs.niri.enable = true;
-  services.greetd = {
-   enable = true;
-    settings = {
-      default_session = {
-       command = "${config.programs.niri.package}/bin/niri-session";
-       user = "teslapiss";
-      };
-    };
-  };
   programs.dconf.enable = true;
   xdg.icons.enable = true; 
+  xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
+  xdg.portal.enable = true;
+  services.displayManager.gdm.enable = true;
+  services.desktopManager.gnome.enable = true;
+  security.polkit.enable = true; 
   
+  services.sunshine = {
+    enable = true;
+    autoStart = true;
+    capSysAdmin = true; # only needed for Wayland -- omit this when using with Xorg
+    openFirewall = true;
+  };
 
     # $ nix search wget
   environment.systemPackages = with pkgs; [
@@ -156,7 +186,6 @@ programs.nix-ld = {
   awww
   firefox
   vscodium
-  spotify
   prismlauncher
   xwayland-satellite
   libnotify
@@ -173,7 +202,19 @@ programs.nix-ld = {
   kdePackages.breeze-icons
   papirus-icon-theme
   nwg-look
-  osu  
+  osu
+  wayland
+  wayland-protocols
+  wayland-scanner
+  xdg-desktop-portal
+  xdg-desktop-portal-gtk
+  fuzzel
+  lsfg-vk-ui
+  tree-sitter
+  gcc
+  gnumake
+  curl
+  gnumake
   ];
    
    services.udev.extraRules =
@@ -210,9 +251,10 @@ programs.nix-ld = {
     ];
   })
   material-symbols
+  gohufont
+  nerd-fonts.gohufont
   ];
-
-
+  fonts.fontconfig.allowBitmaps = true; 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   # programs.mtr.enable = true;
